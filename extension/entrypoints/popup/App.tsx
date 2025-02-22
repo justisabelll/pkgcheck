@@ -2,6 +2,7 @@ import { useState } from 'react';
 import reactLogo from '@/assets/react.svg';
 import wxtLogo from '/wxt.svg';
 import './style.css';
+import { Link } from 'react-router';
 function App() {
   const [count, setCount] = useState(0);
   return (
@@ -45,6 +46,7 @@ function App() {
       <p className="text-white mt-4">
         Click on the WXT and React logos to learn more
       </p>
+      <Link to="/analysis">Analysis</Link>
     </div>
   );
 }
