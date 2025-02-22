@@ -2,51 +2,57 @@ import { useState } from 'react';
 import reactLogo from '@/assets/react.svg';
 import wxtLogo from '/wxt.svg';
 import './style.css';
-import { Link } from 'react-router';
+
+import { Button } from '@/components/button';
+
+let currentUrl = await chrome.tabs
+  .query({
+    active: true,
+    currentWindow: true,
+  })
+  .then((tabs) => tabs[0].url);
+
 function App() {
-  const [count, setCount] = useState(0);
   return (
-    <div className="flex flex-col items-center justify-center p-8 bg-[#242424] text-white w-[400px] h-[500px]">
-      <div className="flex justify-center gap-4">
-        <a
-          href="https://wxt.dev"
-          target="_blank"
-          className="p-6 transition-all duration-300 hover:drop-shadow-[0_0_0.5em_#54bc4ae0]"
-        >
-          <img src={wxtLogo} className="h-24 w-24" alt="WXT logo" />
-        </a>
-        <a
-          href="https://react.dev"
-          target="_blank"
-          className="p-6 transition-all duration-300 hover:drop-shadow-[0_0_0.5em_#61dafbaa]"
-        >
-          <img
-            src={reactLogo}
-            className="h-24 w-24 motion-safe:animate-[spin_20s_linear_infinite]"
-            alt="React logo"
-          />
-        </a>
-      </div>
-      <h1 className="text-5xl font-normal leading-tight mt-8">WXT + React</h1>
-      <div className="p-8">
-        <button
-          onClick={() => setCount((count) => count + 1)}
-          className="rounded-lg border border-transparent bg-[#1a1a1a] px-5 py-2.5 text-base font-medium transition-colors hover:border-[#646cff] focus:outline-none focus:ring-4 focus:ring-[#646cff]/25"
-        >
-          count is {count}
-        </button>
-        <p className="mt-4 text-lg">
-          Edit{' '}
-          <code className="font-mono bg-[#1a1a1a] px-2 py-1 rounded">
-            src/App.tsx
-          </code>{' '}
-          and save to test HMR
-        </p>
-      </div>
-      <p className="text-white mt-4">
-        Click on the WXT and React logos to learn more
+    <div className="flex flex-col items-center p-8 bg-zinc-900 text-white w-[400px] h-[250 px]">
+      <h1 className="text-4xl font-mono font-bold tracking-tight mb-3">
+        PKGCHECK
+      </h1>
+      <p className="text-zinc-400 text-sm text-center max-w-xs mb-8">
+        Helps you verify the safety of AUR packages before downloading them.
       </p>
-      <Link to="/analysis">Analysis</Link>
+
+      {currentUrl?.startsWith('https://aur.archlinux.org/packages/') ? (
+        <div className="w-full max-w-sm rounded-xl bg-zinc-800/50 backdrop-blur p-6 shadow-lg ring-1 ring-white/10">
+          <h2 className="text-lg font-medium mb-4 text-zinc-200">
+            Package:{' '}
+            <span className="text-white font-bold">
+              {currentUrl?.split('/').pop()}
+            </span>
+          </h2>
+          <Button
+            color="blue"
+            className="w-full cursor-pointer"
+            onClick={() => {
+              chrome.runtime.sendMessage({
+                action: 'analyzePackage',
+                url: currentUrl,
+              });
+            }}
+          >
+            Analyze Package
+          </Button>
+        </div>
+      ) : (
+        <div className="w-full max-w-sm rounded-xl bg-red-950/20 p-6 ring-1 ring-red-500/20">
+          <h2 className="text-lg font-medium mb-2 text-red-400">
+            Not an AUR Package
+          </h2>
+          <p className="text-sm text-zinc-400">
+            Please navigate to a valid AUR package page to analyze.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
