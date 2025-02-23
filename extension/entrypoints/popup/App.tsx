@@ -1,6 +1,4 @@
-import { useState } from 'react';
-import reactLogo from '@/assets/react.svg';
-import wxtLogo from '/wxt.svg';
+import { Message } from '../background';
 import './style.css';
 
 import { Button } from '@/components/button';
@@ -11,6 +9,13 @@ let currentUrl = await chrome.tabs
     currentWindow: true,
   })
   .then((tabs) => tabs[0].url);
+
+function analyzePackage() {
+  chrome.runtime.sendMessage({
+    type: 'analyzePackage',
+    url: currentUrl,
+  });
+}
 
 function App() {
   return (
@@ -33,12 +38,7 @@ function App() {
           <Button
             color="blue"
             className="w-full cursor-pointer"
-            onClick={() => {
-              chrome.runtime.sendMessage({
-                action: 'analyzePackage',
-                url: currentUrl,
-              });
-            }}
+            onClick={analyzePackage}
           >
             Analyze Package
           </Button>
