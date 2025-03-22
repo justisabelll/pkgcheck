@@ -120,14 +120,12 @@ export const generateReport = async (pkgData: PkgData, env: Env) => {
     apiKey: env.OPENAI_API_KEY,
   });
 
-  const google = createGoogleGenerativeAI({
-    apiKey: env.GOOGLE_API_KEY,
-  });
-
-  const ai = getModels(openai, google);
+  // const google = createGoogleGenerativeAI({
+  //   apiKey: env.GOOGLE_API_KEY,
+  // });
 
   const { text } = await generateText({
-    model: ai.models.openai.models.openAiO3Mini,
+    model: openai('gpt-4o-mini'),
     system: reportSystemPrompt,
     messages: [
       {
