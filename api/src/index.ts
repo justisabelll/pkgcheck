@@ -1,14 +1,15 @@
 import { Hono } from 'hono';
-import { getPkgbuild, getPkgComments, getPkgMetadata, PkgData } from './utils';
-import { compareModels } from './ai';
-import { Env, EnvStore } from '../env.config';
+import {
+  AnalysisResults,
+  getPkgbuild,
+  getPkgComments,
+  getPkgMetadata,
+  PkgData,
+} from './utils';
+import { summarizeReport, generateReport } from './ai';
+import { Env } from '../env.config';
 
 export const app = new Hono<{ Bindings: Env }>();
-
-app.use('*', async (c, next) => {
-  EnvStore.set(c);
-  await next();
-});
 
 app.get('/', (c) => {
   return c.text('Hello Hono!');
@@ -31,11 +32,12 @@ app.post('/analyze', async (c) => {
     metadata,
   };
 
-  const results = await compareModels(pkgData);
+  const analysis: AnalysisResults = {
+    report: await generateReport(pkgData, c.env),
+    summary: await summarizeReport(await generateReport(pkgData, c.env), c.env),
+  };
 
-  return c.json({
-    results,
-  });
+  return c.json(analysis);
 });
 
 export default app;

@@ -1,5 +1,20 @@
 import * as cheerio from 'cheerio';
 
+export interface AnalysisResults {
+  report: string;
+  summary: Summary;
+}
+
+export interface Summary {
+  riskLevel: 'low' | 'medium' | 'high';
+  riskColor: 'green' | 'yellow' | 'red';
+  summary: string;
+  recommendation: 'install' | 'proceed with caution' | 'avoid';
+  keyPoints: string[];
+  topConcerns: string[];
+  commentsFYI: string;
+}
+
 export interface PkgData {
   build: string;
   metadata: {
@@ -153,3 +168,56 @@ function parseCommentsFromHTML(html: string, fromPage: number): Comment[] {
 
   return comments;
 }
+
+// // Function that calls all models and returns comparison results
+// export const compareModels = async (pkgData: PkgData, env: Env) => {
+//   const openai = createOpenAI({
+//     apiKey: env.OPENAI_API_KEY,
+//   });
+
+//   const google = createGoogleGenerativeAI({
+//     apiKey: env.GOOGLE_API_KEY,
+//   });
+
+//   const models = getModels(openai, google);
+
+//   // Flatten models object into array of model configs
+//   const modelConfigs = Object.entries(models.models.openai.models)
+//     .map(([name, model]) => ({
+//       name,
+//       model,
+//     }))
+//     .concat(
+//       Object.entries(models.models.google.models).map(([name, model]) => ({
+//         name,
+//         model,
+//       }))
+//     );
+
+//   // Run analysis with each model
+//   const results = await Promise.all(
+//     modelConfigs.map(async ({ name, model }) => {
+//       const { text } = await generateText({
+//         model,
+//         system: reportSystemPrompt,
+//         messages: [
+//           {
+//             role: 'user',
+//             content: `Analyze the following package and provide a detailed report:
+
+//         Metadata: ${JSON.stringify(pkgData.metadata, null, 2)}
+//         PKGBUILD: ${JSON.stringify(pkgData.build, null, 2)}
+//         Comments: ${JSON.stringify(pkgData.comments, null, 2)}`,
+//           },
+//         ],
+//       });
+
+//       return {
+//         model: name,
+//         result: text,
+//       };
+//     })
+//   );
+
+//   return results;
+// };

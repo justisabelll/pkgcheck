@@ -1,67 +1,107 @@
-import { generateText } from 'ai';
-import { openai } from '@ai-sdk/openai';
-import { google } from '@ai-sdk/google';
+import { generateText, generateObject } from 'ai';
+import { createOpenAI, OpenAIProvider } from '@ai-sdk/openai';
+import {
+  createGoogleGenerativeAI,
+  GoogleGenerativeAIProvider,
+} from '@ai-sdk/google';
+import { z } from 'zod';
 
-import { PkgData } from './utils';
-import { EnvStore } from '../env.config';
+import { PkgData, Summary } from './utils';
+import { Env } from '../env.config';
 
-const systemPrompt = (pkgData: PkgData) => `
+const reportSystemPrompt = `
 <system_context>
-You are an advanced AUR package safety analyzer. You evaluate Arch Linux packages by examining their PKGBUILD, metadata, and community feedback to assess security risks and trustworthiness.
+You are an advanced AUR package safety analyzer. You evaluate Arch Linux packages by examining their PKGBUILD, metadata, and community feedback to assess security risks and trustworthiness. You rely on your own knowledge and reasoning to identify potential risks, as you do not have access to real-time data or external databases, however the information you are provided about the package is up to date.
 </system_context>
 
 <analysis_guidelines>
-- focus on concrete security indicators and trust signals
-- highlight both positive and negative findings
-- provide clear, actionable conclusions
-- maintain professional but conversational tone
+- Focus on concrete security indicators, such as:
+  - Unsafe practices in PKGBUILD (e.g., unverified sources, unchecked scripts)
+  - Signs of malicious intent (e.g., obfuscated code, unusual behavior)
+  - Verification-related fields in PKGBUILD (e.g., \`validpgpkeys\`, checksum validation)
+- Highlight both positive and negative findings, with examples where possible.
+- Evaluate trust signals based on general patterns, including:
+  - Package popularity (e.g., general advice about votes/downloads)
+  - Update frequency (e.g., outdated or orphaned packages)
+  - Maintainer track record (e.g., responsiveness, history of contributions)
+  - Community sentiment (e.g., general advice about checking forums or comments)
+- Provide clear, actionable conclusions with a risk score (e.g., low/medium/high risk).
+- Maintain a professional tone that is clear and concise, suitable for technical users.
 </analysis_guidelines>
 
 <output_format>
-Generate a security report with these sections:
+Generate a security report with these sections, you should not respond with anything else than the report:
 
-1. TRUST SIGNALS
-- package popularity and update frequency
-- maintainer track record
-- community sentiment summary
+1. **TRUST SIGNALS**
+   - Package popularity and update frequency (based on general patterns; advise users to check AUR page for votes/downloads)
+   - Maintainer track record (based on metadata or general advice)
+   - Community sentiment summary (general advice about checking forums or comments)
 
-2. SECURITY ANALYSIS
-- PKGBUILD inspection results
-- dependency evaluation
-- identified risk patterns
+2. **SECURITY ANALYSIS**
+   - PKGBUILD inspection results (e.g., unsafe practices, unverified sources)
+   - Dependency evaluation (e.g., outdated libraries, general risks)
+   - Identified risk patterns (e.g., obfuscated code, unusual behavior)
 
-3. VERDICT
-- clear install recommendation
-- key concerns (if any)
-- suggested precautions
+3. **VERDICT**
+   - Risk score (e.g., low/medium/high risk)
+   - Clear install recommendation (e.g., safe to install, proceed with caution, avoid)
+   - Key concerns (if any)
+   - Suggested precautions (e.g., verify sources, sandbox installation, manually check votes/downloads)
+   - Important information to know from the comments.
 
-Keep sections concise but thorough. Use markdown for formatting.
+Use markdown for formatting to ensure readability.
 </output_format>
-
-<package_context>
-Metadata: ${pkgData.metadata}
-
-PKGBUILD: ${pkgData.build}
-
-Comments: ${pkgData.comments}
-</package_context>
 `;
 
-const getModels = () => ({
-  openai: {
-    apiKey: EnvStore.get().OPENAI_API_KEY,
-    models: {
-      openAiO3Mini: openai('o3-mini', {
-        reasoningEffort: 'high',
-      }),
-      openAiO1Mini: openai('o1-mini', {
-        reasoningEffort: 'high',
-      }),
-      openAiGpt4: openai('gpt-4'),
-      openAiGpt4Mini: openai('gpt-4-mini'),
+const summarizeSystemPrompt = `
+<system_context>
+You are a UI content specialist for a Chrome extension that analyzes AUR package safety. Your job is to transform detailed security reports into concise, user-friendly summaries that can be displayed in a browser extension popup. Focus on clarity, brevity, and actionable information.
+</system_context>
+
+<input_format>
+You will receive a detailed security report with sections on trust signals, security analysis, and a verdict for an AUR package.
+</input_format>
+
+<task>
+Transform the detailed report into a concise, visually scannable summary suitable for a Chrome extension popup. Extract the most critical information while preserving the overall security assessment.
+</task>
+
+<output_requirements>
+Your response should include:
+
+1. The name of the AUR package being analyzed.
+
+2. A risk assessment with:
+   - A clear risk level (low, medium, or high)
+   - A color indicator (green, yellow, or red)
+   - A one-sentence overall assessment (max 100 characters)
+
+3. A clear recommendation (install, proceed with caution, or avoid)
+
+4. 3-5 key points that highlight the most important findings (keep each under 80 characters)
+
+5. Top concerns (if any exist)
+
+6. Recommended precautions (if needed)
+
+7. Important information to know from the comments.
+</output_requirements>
+`;
+
+const getModels = (
+  openai: OpenAIProvider,
+  google: GoogleGenerativeAIProvider
+) => ({
+  models: {
+    openai: {
+      models: {
+        openAiO3Mini: openai('o3-mini'),
+        openAiO1Mini: openai('o1-mini'),
+        openAiGpt4: openai('gpt-4o'),
+        openAiGpt4Mini: openai('gpt-4o-mini'),
+      },
     },
     google: {
-      apiKey: EnvStore.get().GOOGLE_API_KEY,
       models: {
         geminiFlashThinkingExperimental: google(
           'gemini-2.0-flash-thinking-exp-01-21'
@@ -75,17 +115,28 @@ const getModels = () => ({
   },
 });
 
-export const aiAnalysis = async (pkgData: PkgData) => {
-  const models = getModels();
+export const generateReport = async (pkgData: PkgData, env: Env) => {
+  const openai = createOpenAI({
+    apiKey: env.OPENAI_API_KEY,
+  });
+
+  const google = createGoogleGenerativeAI({
+    apiKey: env.GOOGLE_API_KEY,
+  });
+
+  const ai = getModels(openai, google);
+
   const { text } = await generateText({
-    model: openai('o3-mini', {
-      reasoningEffort: 'high',
-    }),
-    system: systemPrompt(pkgData),
+    model: ai.models.openai.models.openAiO3Mini,
+    system: reportSystemPrompt,
     messages: [
       {
         role: 'user',
-        content: 'Analyze the package and provide a detailed report.',
+        content: `Analyze the following package and provide a detailed report:
+
+        Metadata: ${JSON.stringify(pkgData.metadata, null, 2)}
+        PKGBUILD: ${JSON.stringify(pkgData.build, null, 2)}
+        Comments: ${JSON.stringify(pkgData.comments, null, 2)}`,
       },
     ],
   });
@@ -93,43 +144,34 @@ export const aiAnalysis = async (pkgData: PkgData) => {
   return text;
 };
 
-// Function that calls all models and returns comparison results
-export const compareModels = async (pkgData: PkgData) => {
-  const models = getModels();
+export const summarizeReport = async (
+  report: string,
+  env: Env
+): Promise<Summary> => {
+  const openai = createOpenAI({
+    apiKey: env.OPENAI_API_KEY,
+  });
 
-  // Flatten models object into array of model configs
-  const modelConfigs = Object.entries(models.openai.models)
-    .map(([name, model]) => ({
-      name,
-      model,
-    }))
-    .concat(
-      Object.entries(models.openai.google.models).map(([name, model]) => ({
-        name,
-        model,
-      }))
-    );
+  const summary = await generateObject({
+    model: openai('gpt-4o-mini', {
+      structuredOutputs: true,
+    }),
+    system: summarizeSystemPrompt,
+    schemaName: 'AUR Package Report Summary',
+    schemaDescription: 'A summary of the AUR package report',
+    schema: z.object({
+      name: z.string(),
+      riskLevel: z.enum(['low', 'medium', 'high']),
+      riskColor: z.enum(['green', 'yellow', 'red']),
+      summary: z.string(),
+      recommendation: z.enum(['install', 'proceed with caution', 'avoid']),
+      keyPoints: z.array(z.string()),
+      topConcerns: z.array(z.string()),
+      commentsFYI: z.string(),
+    }),
+    prompt: `Summarize the following report:
+        ${report}`,
+  });
 
-  // Run analysis with each model
-  const results = await Promise.all(
-    modelConfigs.map(async ({ name, model }) => {
-      const { text } = await generateText({
-        model,
-        system: systemPrompt(pkgData),
-        messages: [
-          {
-            role: 'user',
-            content: 'Analyze the package and provide a detailed report.',
-          },
-        ],
-      });
-
-      return {
-        model: name,
-        result: text,
-      };
-    })
-  );
-
-  return results;
+  return summary.object;
 };
