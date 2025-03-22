@@ -10,11 +10,11 @@
     "@types/node": "^22.13.5",
     "ai": "^4.1.45",
     "cheerio": "^1.0.0",
-    "hono": "^4.7.2"
+    "hono": "^4.7.2",
+    "wrangler": "^4.4.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250109.0",
-    "@types/bun": "^1.2.3",
-    "wrangler": "^3.109.3"
+    "@types/bun": "^1.2.3"
   }
 }

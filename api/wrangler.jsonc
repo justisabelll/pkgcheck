@@ -2,10 +2,8 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "pkgcheck-api",
   "main": "src/index.ts",
-  "compatibility_date": "2025-02-23"
-  // "compatibility_flags": [
-  //   "nodejs_compat"
-  // ],
+  "compatibility_date": "2025-03-22",
+  "compatibility_flags": ["nodejs_compat"]
   // "vars": {
   //   "MY_VAR": "my-variable"
   // }
