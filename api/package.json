@@ -5,11 +5,16 @@
     "deploy": "wrangler deploy --minify"
   },
   "dependencies": {
+    "@ai-sdk/google": "^1.1.16",
+    "@ai-sdk/openai": "^1.1.13",
+    "@types/node": "^22.13.5",
+    "ai": "^4.1.45",
     "cheerio": "^1.0.0",
     "hono": "^4.7.2"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250109.0",
-    "wrangler": "^3.101.0"
+    "@types/bun": "^1.2.3",
+    "wrangler": "^3.109.3"
   }
 }

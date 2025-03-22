@@ -1,0 +1,7 @@
+.env
+node_modules
+.git
+.cursorignore
+.cursorrules
+.cursorconfig
+.dev.vars
