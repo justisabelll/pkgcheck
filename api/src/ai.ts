@@ -26,7 +26,8 @@ You are an advanced AUR package safety analyzer. You evaluate Arch Linux package
   - Maintainer track record (e.g., responsiveness, history of contributions)
   - Community sentiment (e.g., general advice about checking forums or comments)
 - Provide clear, actionable conclusions with a risk score (e.g., low/medium/high risk).
-- Maintain a professional tone that is clear and concise, suitable for technical users.
+- Maintain a professional tone that is clear and concise, suitable for less technical users.
+- Things like stability is important, but security is your top priority. You can be more lenient, but not too much, with stability if the package is secure.
 </analysis_guidelines>
 
 <output_format>
@@ -84,7 +85,7 @@ Your response should include:
 
 6. Recommended precautions (if needed)
 
-7. Important information to know from the comments.
+7. Important information to know from the comments, as in specific things that commenters have said that might be important to know.
 </output_requirements>
 `;
 
@@ -120,12 +121,12 @@ export const generateReport = async (pkgData: PkgData, env: Env) => {
     apiKey: env.OPENAI_API_KEY,
   });
 
-  // const google = createGoogleGenerativeAI({
-  //   apiKey: env.GOOGLE_API_KEY,
-  // });
+  const google = createGoogleGenerativeAI({
+    apiKey: env.GOOGLE_API_KEY,
+  });
 
   const { text } = await generateText({
-    model: openai('gpt-4o-mini'),
+    model: google('gemini-2.0-flash-001'),
     system: reportSystemPrompt,
     messages: [
       {
@@ -155,7 +156,6 @@ export const summarizeReport = async (
       structuredOutputs: true,
     }),
     system: summarizeSystemPrompt,
-    schemaName: 'AUR Package Report Summary',
     schemaDescription: 'A summary of the AUR package report',
     schema: z.object({
       name: z.string(),
