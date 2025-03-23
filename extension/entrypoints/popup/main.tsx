@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App.tsx';
 import Analysis from './views/Analysis.tsx';
 import { BrowserRouter, Routes, Route } from 'react-router';
+
 import './style.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
